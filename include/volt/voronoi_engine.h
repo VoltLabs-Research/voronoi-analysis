@@ -22,9 +22,8 @@ using Volt::Particles::SimulationCell;
  *   4. Count neighbor faces, optionally filtered by face area
  *      (faceThreshold) and minimum edge length (edgeThreshold), producing
  *      a topological coordination number.
- *   5. Compute the cell volume (atomic volume).
- *   6. Optionally compute the Voronoi index
- *      `[n_3, n_4, ..., n_edgeCount]`.
+ *   5. Compute the cell volume (atomic volume) and the cavity radius (the
+ *      largest empty sphere centred on the atom that fits inside the cell).
  */
 class VoronoiAnalysisEngine{
 public:
@@ -32,8 +31,6 @@ public:
         double cutoff = 0.0;
         double edgeThreshold = 0.0;
         double faceThreshold = 0.0;
-        bool computeIndices = false;
-        int edgeCount = 6;
         bool useRadii = false;
     };
 
@@ -56,8 +53,7 @@ public:
     // Outputs (allocated by the engine, always non-null after construction).
     std::shared_ptr<ParticleProperty> atomicVolumes() const { return _atomicVolumes; }
     std::shared_ptr<ParticleProperty> coordNumbers() const { return _coordNumbers; }
-    std::shared_ptr<ParticleProperty> maxFaceOrder() const { return _maxFaceOrder; }
-    std::shared_ptr<ParticleProperty> voronoiIndex() const { return _voronoiIndex; }
+    std::shared_ptr<ParticleProperty> cavityRadii() const { return _cavityRadii; }
 
     ParticleProperty* positions() const { return _positions; }
     const SimulationCell& cell() const { return _simCell; }
@@ -81,8 +77,7 @@ private:
 
     std::shared_ptr<ParticleProperty> _atomicVolumes;
     std::shared_ptr<ParticleProperty> _coordNumbers;
-    std::shared_ptr<ParticleProperty> _maxFaceOrder;
-    std::shared_ptr<ParticleProperty> _voronoiIndex;
+    std::shared_ptr<ParticleProperty> _cavityRadii;
 };
 
 }

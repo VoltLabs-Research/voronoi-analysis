@@ -33,14 +33,8 @@ VoronoiAnalysisEngine::VoronoiAnalysisEngine(
         n, Volt::Particles::DataType::Double, 1, sizeof(double), true);
     _coordNumbers = std::make_shared<ParticleProperty>(
         n, ParticleProperty::CoordinationProperty, 0, true);
-    _maxFaceOrder = std::make_shared<ParticleProperty>(
-        n, Volt::Particles::DataType::Int, 1, sizeof(int), true);
-
-    const int indexComponents = std::max(1, _params.edgeCount - 2);
-    _voronoiIndex = std::make_shared<ParticleProperty>(
-        n, Volt::Particles::DataType::Int,
-        static_cast<size_t>(indexComponents),
-        static_cast<size_t>(indexComponents) * sizeof(int), true);
+    _cavityRadii = std::make_shared<ParticleProperty>(
+        n, Volt::Particles::DataType::Double, 1, sizeof(double), true);
 }
 
 double VoronoiAnalysisEngine::estimateAutoCutoff(){
@@ -100,11 +94,7 @@ void VoronoiAnalysisEngine::processAtom(size_t atomIndex, CutoffNeighborFinder& 
         if(_selection->getInt(atomIndex) == 0){
             _atomicVolumes->setDouble(atomIndex, 0.0);
             _coordNumbers->setInt(atomIndex, 0);
-            _maxFaceOrder->setInt(atomIndex, 0);
-            const size_t comps = _voronoiIndex->componentCount();
-            for(size_t c = 0; c < comps; ++c){
-                _voronoiIndex->setIntComponent(atomIndex, c, 0);
-            }
+            _cavityRadii->setDouble(atomIndex, 0.0);
             return;
         }
     }
@@ -166,12 +156,10 @@ void VoronoiAnalysisEngine::processAtom(size_t atomIndex, CutoffNeighborFinder& 
     // Evaluate cell properties.
     const double volume = cell.volume();
     _atomicVolumes->setDouble(atomIndex, volume);
+    _cavityRadii->setDouble(atomIndex, cell.cavityRadius());
 
     // Count neighbor-generated faces that survived the thresholds.
     int coordNum = 0;
-    int maxOrder = 0;
-    const int indexComponents = static_cast<int>(_voronoiIndex->componentCount());
-    std::vector<int> indexCounts(static_cast<size_t>(indexComponents), 0);
 
     for(const VoronoiCell::Face& face : cell.faces()){
         if(face.neighborIndex < 0) continue; // bootstrap face remnant
@@ -185,25 +173,9 @@ void VoronoiAnalysisEngine::processAtom(size_t atomIndex, CutoffNeighborFinder& 
         if(minEdge < _params.edgeThreshold) continue;
 
         ++coordNum;
-        if(order > maxOrder) maxOrder = order;
-
-        if(_params.computeIndices){
-            // voronoi_index[k] counts faces of order (k+3), up to edgeCount.
-            const int bin = order - 3;
-            if(bin >= 0 && bin < indexComponents){
-                indexCounts[static_cast<size_t>(bin)] += 1;
-            }
-        }
     }
 
     _coordNumbers->setInt(atomIndex, coordNum);
-    _maxFaceOrder->setInt(atomIndex, maxOrder);
-
-    for(int c = 0; c < indexComponents; ++c){
-        _voronoiIndex->setIntComponent(atomIndex,
-            static_cast<size_t>(c),
-            _params.computeIndices ? indexCounts[static_cast<size_t>(c)] : 0);
-    }
 }
 
 }

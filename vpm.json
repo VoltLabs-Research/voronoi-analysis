@@ -1,6 +1,6 @@
 {
   "name": "@voltlabs/voronoi-analysis",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "kind": "workflow",
   "publisher": "voltlabs",
   "description": "Per-atom Voronoi tessellation: atomic volume, topological coordination number, max face order, and optional Voronoi index vector.",

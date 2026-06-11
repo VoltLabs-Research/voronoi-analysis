@@ -17,16 +17,12 @@ VoronoiService::VoronoiService()
     : _cutoff(0.0),
       _edgeThreshold(0.0),
       _faceThreshold(0.0),
-      _computeIndices(false),
-      _edgeCount(6),
       _useRadii(false),
       _onlySelected(false) {}
 
 void VoronoiService::setCutoff(double cutoff){ _cutoff = cutoff; }
 void VoronoiService::setEdgeThreshold(double v){ _edgeThreshold = v; }
 void VoronoiService::setFaceThreshold(double v){ _faceThreshold = v; }
-void VoronoiService::setComputeIndices(bool v){ _computeIndices = v; }
-void VoronoiService::setEdgeCount(int v){ _edgeCount = v; }
 void VoronoiService::setUseRadii(bool v){ _useRadii = v; }
 void VoronoiService::setOnlySelected(bool v){ _onlySelected = v; }
 
@@ -106,21 +102,15 @@ json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string
         }
     }
 
-    const int edgeCount = std::max(3, _edgeCount);
-
     VoronoiAnalysisEngine::Params params;
     params.cutoff = _cutoff;
     params.edgeThreshold = _edgeThreshold;
     params.faceThreshold = _faceThreshold;
-    params.computeIndices = _computeIndices;
-    params.edgeCount = edgeCount;
     params.useRadii = _useRadii && radii != nullptr;
 
     spdlog::info(
-        "Starting Voronoi tessellation (cutoff={}, edgeThr={}, faceThr={}, indices={}, edgeCount={}, radii={})",
+        "Starting Voronoi tessellation (cutoff={}, edgeThr={}, faceThr={}, radii={})",
         params.cutoff, params.edgeThreshold, params.faceThreshold,
-        params.computeIndices ? "true" : "false",
-        params.edgeCount,
         params.useRadii ? "true" : "false"
     );
 
@@ -135,8 +125,7 @@ json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string
 
     auto volumes = engine.atomicVolumes();
     auto coords = engine.coordNumbers();
-    auto maxOrders = engine.maxFaceOrder();
-    auto indices = engine.voronoiIndex();
+    auto cavityRadii = engine.cavityRadii();
 
     // Aggregate stats.
     double volumeSum = 0.0;
@@ -159,7 +148,6 @@ json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string
         {"effective_cutoff", engine.effectiveCutoff()},
         {"edge_threshold", params.edgeThreshold},
         {"face_threshold", params.faceThreshold},
-        {"edge_count", params.edgeCount},
         {"use_radii", params.useRadii},
     };
     AnalysisResult::addTiming(result, startTime);
@@ -177,9 +165,6 @@ json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string
         // streamAtomsToParquet is used directly (instead of serializePluginOutput)
         // so a StructureIdResolver can pin structure_id = coordination, matching the
         // legacy export and the "Coordination_<k>" bucket grouping.
-        const bool emitIndex = params.computeIndices;
-        const std::size_t indexComponents = indices ? indices->componentCount() : 0;
-
         const std::string atomsPath = outputBase + "_atoms.parquet";
         streamAtomsToParquet(
             atomsPath,
@@ -187,23 +172,10 @@ json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string
             [&coords](std::size_t i){
                 return "Coordination_" + std::to_string(coords->getInt(i));
             },
-            [&, emitIndex, indexComponents](ColumnarAtomWriter& w, std::size_t i){
-                w.field("coordination",   coords->getInt(i));
-                w.field("atomic_volume",  volumes->getDouble(i));
-                w.field("max_face_order", maxOrders->getInt(i));
-                if(emitIndex){
-                    // Per-order scalar columns voro_n3..voro_n<edgeCount> so the
-                    // client can color/filter by an individual face-order count.
-                    std::vector<double> idx(indexComponents);
-                    for(std::size_t c = 0; c < indexComponents; ++c){
-                        const int n = indices->getIntComponent(i, c);
-                        w.field("voro_n" + std::to_string(c + 3), n);
-                        idx[c] = static_cast<double>(n);
-                    }
-                    // Full index vector as a single list<double> column for
-                    // downstream analysis (no list<int> overload exists).
-                    w.field("voronoi_index", idx);
-                }
+            [&](ColumnarAtomWriter& w, std::size_t i){
+                w.field("coordination",  coords->getInt(i));
+                w.field("atomic_volume", volumes->getDouble(i));
+                w.field("cavity_radius", cavityRadii->getDouble(i));
             },
             [&coords](std::size_t i){
                 return coords->getInt(i);

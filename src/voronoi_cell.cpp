@@ -310,6 +310,39 @@ double VoronoiCell::volume() const {
     return std::abs(v) / 6.0;
 }
 
+double VoronoiCell::cavityRadius() const {
+    if(_vertices.empty() || _faces.empty()) return 0.0;
+
+    // The cavity radius is the distance from the central atom (the origin) to
+    // the nearest face plane. Each face plane is reconstructed from its own
+    // vertices (rather than the stored `normal`, which is non-unit and only
+    // axis-aligned for bootstrap faces): take the plane through the first
+    // vertex with the polygon's geometric normal, then the origin-to-plane
+    // distance is |v0 . n_hat|.
+    double minDist = std::numeric_limits<double>::infinity();
+    for(const Face& face : _faces){
+        const int m = static_cast<int>(face.vertices.size());
+        if(m < 3) continue;
+        const Vector3& v0 = _vertices[face.vertices[0]];
+
+        // Newell-style normal accumulation is overkill for a convex face; the
+        // cross product of two fan edges is a robust plane normal here.
+        Vector3 normal(0.0, 0.0, 0.0);
+        for(int i = 1; i + 1 < m; ++i){
+            const Vector3& v1 = _vertices[face.vertices[i]];
+            const Vector3& v2 = _vertices[face.vertices[i + 1]];
+            normal += (v1 - v0).cross(v2 - v0);
+        }
+        const double nLen = normal.length();
+        if(nLen <= kEps) continue; // degenerate face
+
+        const double dist = std::abs(v0.dot(normal) / nLen);
+        if(dist < minDist) minDist = dist;
+    }
+
+    return std::isfinite(minDist) ? minDist : 0.0;
+}
+
 double VoronoiCell::faceArea(const Face& face) const {
     const int m = static_cast<int>(face.vertices.size());
     if(m < 3) return 0.0;

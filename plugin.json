@@ -15,9 +15,9 @@
             "icon": "HiCube",
             "author": "Rodolfo Herrera",
             "license": "MIT",
-            "version": "1.0.0",
+            "version": "1.0.2",
             "homepage": "https://github.com/rodyherrera/Volterra",
-            "description": "Computa la teselacion de Voronoi por atomo (volumen atomico, numero de coordinacion topologico, orden maximo de cara y opcionalmente el vector de indice de Voronoi) usando una implementacion interna de clipping por semi-espacios."
+            "description": "Computa la teselacion de Voronoi por atomo (numero de coordinacion topologico, volumen atomico y radio de cavidad) usando una implementacion interna de clipping por semi-espacios."
           }
         }
       },
@@ -54,21 +54,6 @@
                 "default": 0,
                 "min": 0,
                 "step": 0.01
-              },
-              {
-                "argument": "computeIndices",
-                "type": "boolean",
-                "label": "Compute Voronoi Indices",
-                "default": false
-              },
-              {
-                "argument": "edgeCount",
-                "type": "number",
-                "label": "Max Polygon Order",
-                "default": 6,
-                "min": 3,
-                "max": 20,
-                "step": 1
               },
               {
                 "argument": "useRadii",
@@ -171,9 +156,9 @@
                 "type": "double"
               },
               {
-                "key": "max_face_order",
-                "label": "Max face order",
-                "type": "int"
+                "key": "cavity_radius",
+                "label": "Cavity radius",
+                "type": "double"
               }
             ]
           }

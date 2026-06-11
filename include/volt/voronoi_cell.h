@@ -56,6 +56,13 @@ public:
     // from its first vertex and summing signed tetrahedra from the origin.
     double volume() const;
 
+    // Returns the radius of the largest empty sphere centred on the atom (the
+    // origin) that fits inside the cell, i.e. the minimum distance from the
+    // origin to any face plane. This is the "cavity radius" (a.k.a. the
+    // Voronoi cell's inscribed radius about the central atom). Returns 0 for an
+    // empty cell.
+    double cavityRadius() const;
+
     // Returns true if the cell currently has zero vertices or faces.
     bool isEmpty() const noexcept {
         return _vertices.empty() || _faces.empty();

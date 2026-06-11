@@ -25,8 +25,6 @@ public:
     void setCutoff(double cutoff);
     void setEdgeThreshold(double edgeThreshold);
     void setFaceThreshold(double faceThreshold);
-    void setComputeIndices(bool computeIndices);
-    void setEdgeCount(int edgeCount);
     void setUseRadii(bool useRadii);
     void setOnlySelected(bool onlySelected);
 
@@ -39,8 +37,6 @@ private:
     double _cutoff;
     double _edgeThreshold;
     double _faceThreshold;
-    bool _computeIndices;
-    int _edgeCount;
     bool _useRadii;
     bool _onlySelected;
 };
