@@ -57,7 +57,7 @@ double VoronoiAnalysisEngine::estimateAutoCutoff(){
     }
     const double volPerAtom = cellVol / static_cast<double>(n);
     // Radius of sphere with volume volPerAtom: r = (3V/4pi)^(1/3)
-    const double rSphere = std::cbrt(3.0 * volPerAtom / (4.0 * M_PI));
+    const double rSphere = std::cbrt(3.0 * volPerAtom / (4.0 * PI));
     // Nearest-neighbor distance in a dense packing is ~2*rSphere; add a 2x
     // safety margin so the bootstrap cube is comfortably larger than the
     // true Voronoi cell.
