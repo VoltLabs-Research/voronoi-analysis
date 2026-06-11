@@ -1,0 +1,28 @@
+{
+  "name": "@voltlabs/voronoi-analysis",
+  "version": "1.0.0",
+  "kind": "workflow",
+  "publisher": "voltlabs",
+  "description": "Per-atom Voronoi tessellation: atomic volume, topological coordination number, max face order, and optional Voronoi index vector.",
+  "license": "MIT",
+  "homepage": "https://github.com/voltlabs-research/voronoi-analysis",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/voltlabs-research/voronoi-analysis"
+  },
+  "entrypoints": {
+    "binary": "voronoi-analysis-plugin.zip",
+    "workflow": "plugin.json"
+  },
+  "platforms": [
+    "linux-x86_64",
+    "darwin-arm64",
+    "windows-x86_64"
+  ],
+  "coretoolkit": "1.0.0",
+  "files": [
+    "plugin.json",
+    "bin",
+    "lib"
+  ]
+}
