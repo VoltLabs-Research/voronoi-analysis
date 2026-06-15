@@ -15,7 +15,7 @@
             "icon": "HiCube",
             "author": "Rodolfo Herrera",
             "license": "MIT",
-            "version": "1.0.2",
+            "version": "1.0.3",
             "homepage": "https://github.com/rodyherrera/Volterra",
             "description": "Computa la teselacion de Voronoi por atomo (numero de coordinacion topologico, volumen atomico y radio de cavidad) usando una implementacion interna de clipping por semi-espacios."
           }
