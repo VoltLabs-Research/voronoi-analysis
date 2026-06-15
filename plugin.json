@@ -127,7 +127,14 @@
             "name": "Voronoi Analysis",
             "icon": "HiCube",
             "results": "voronoi.parquet",
-            "iterable": ""
+            "iterable": "",
+            "properties": [
+              { "key": "mean_face_order", "label": "Mean Face Order", "type": "double" },
+              { "key": "max_face_order_observed", "label": "Max Face Order Observed", "type": "int" },
+              { "key": "polyhedra_mesh_count", "label": "Polyhedra Mesh Count", "type": "int" },
+              { "key": "mean_atomic_volume", "label": "Mean Atomic Volume", "type": "double" },
+              { "key": "mean_coordination", "label": "Mean Coordination", "type": "double" }
+            ]
           }
         }
       },
@@ -159,6 +166,11 @@
                 "key": "cavity_radius",
                 "label": "Cavity radius",
                 "type": "double"
+              },
+              {
+                "key": "face_indices",
+                "label": "Face indices (Voronoi index vector)",
+                "type": "list<double>"
               }
             ]
           }

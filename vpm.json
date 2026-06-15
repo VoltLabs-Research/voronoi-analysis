@@ -19,7 +19,7 @@
     "darwin-arm64",
     "windows-x86_64"
   ],
-  "coretoolkit": "1.0.0",
+  "coretoolkit": "2.0.0",
   "files": [
     "plugin.json",
     "bin",

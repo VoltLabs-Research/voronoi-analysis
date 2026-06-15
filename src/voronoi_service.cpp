@@ -139,7 +139,6 @@ json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string
     const double meanCoord = atomCount > 0 ? static_cast<double>(coordSum) / atomCount : 0.0;
 
     // Summary table (written to <base>_voronoi.parquet) -----------------------
-    // Scalar aggregates only; per-atom data now lives in <base>_atoms.parquet.
     json result;
     result["main_listing"] = {
         {"total_atoms", atomCount},
@@ -149,6 +148,9 @@ json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string
         {"edge_threshold", params.edgeThreshold},
         {"face_threshold", params.faceThreshold},
         {"use_radii", params.useRadii},
+        {"mean_face_order", engine.meanFaceOrder()},
+        {"max_face_order_observed", engine.maxFaceOrderObserved()},
+        {"polyhedra_mesh_count", engine.polyhedraMeshCount()},
     };
     AnalysisResult::addTiming(result, startTime);
     result["is_failed"] = false;
@@ -166,6 +168,7 @@ json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string
         // so a StructureIdResolver can pin structure_id = coordination, matching the
         // legacy export and the "Coordination_<k>" bucket grouping.
         const std::string atomsPath = outputBase + "_atoms.parquet";
+        const auto& faceIndices = engine.faceIndices();
         streamAtomsToParquet(
             atomsPath,
             frame,
@@ -176,6 +179,11 @@ json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string
                 w.field("coordination",  coords->getInt(i));
                 w.field("atomic_volume", volumes->getDouble(i));
                 w.field("cavity_radius", cavityRadii->getDouble(i));
+                if(i < faceIndices.size()){
+                    const auto& fi = faceIndices[i];
+                    std::vector<double> fiDouble(fi.begin(), fi.end());
+                    w.field("face_indices", fiDouble);
+                }
             },
             [&coords](std::size_t i){
                 return coords->getInt(i);
