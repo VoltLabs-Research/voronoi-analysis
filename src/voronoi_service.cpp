@@ -164,9 +164,12 @@ json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string
         }
 
         // Per-atom table (<base>_atoms.parquet) via the canonical streaming writer.
-        // streamAtomsToParquet is used directly (instead of serializePluginOutput)
-        // so a StructureIdResolver can pin structure_id = coordination, matching the
-        // legacy export and the "Coordination_<k>" bucket grouping.
+        // structure columns are intentionally omitted (includeStructureColumns=false):
+        // Voronoi produces no crystal-structure classification, so emitting them would
+        // overwrite an upstream PTM/CNA stage's structure_id during the pipeline merge.
+        // Coordination lives in its own `coordination` property column (below), which is
+        // what the UI property catalog discovers; the "Coordination_<k>" bucket still
+        // drives standalone Voronoi GLB grouping / listings.
         const std::string atomsPath = outputBase + "_atoms.parquet";
         const auto& faceIndices = engine.faceIndices();
         streamAtomsToParquet(
@@ -185,9 +188,8 @@ json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string
                     w.field("face_indices", fiDouble);
                 }
             },
-            [&coords](std::size_t i){
-                return coords->getInt(i);
-            }
+            /*resolveStructureId=*/{},
+            /*includeStructureColumns=*/false
         );
         spdlog::info("Voronoi atoms parquet written to {}", atomsPath);
     }
