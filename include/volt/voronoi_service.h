@@ -11,13 +11,6 @@ namespace Volt{
 
 using json = nlohmann::json;
 
-/**
- * High-level Voronoi analysis driver.
- *
- * Wraps VoronoiAnalysisEngine with LAMMPS-frame IO and per-atom Parquet export
- * (a summary table plus the AtomisticExporter grouping-by-coordination atoms
- * table written via streamAtomsToParquet).
- */
 class VoronoiService{
 public:
     VoronoiService();

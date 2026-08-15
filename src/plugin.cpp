@@ -13,5 +13,4 @@ static const std::vector<OptionBinding<S>> bindings = {
     opt("--onlySelected",   "Only analyze atoms with non-zero Selection",   false, &S::setOnlySelected),
 };
 
-// NOTE: --threads is intentionally NOT a binding; pluginMain owns TBB global_control.
 VOLT_SERVICE_PLUGIN("volt-voronoi", "Voronoi Analysis", S, bindings)

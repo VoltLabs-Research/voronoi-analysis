@@ -28,7 +28,6 @@ void VoronoiService::setOnlySelected(bool v){ _onlySelected = v; }
 
 namespace {
 
-// Resolve an optional scalar double column from the LAMMPS frame.
 std::shared_ptr<ParticleProperty> tryBindDoubleColumn(
     const LammpsParser::Frame& frame,
     std::initializer_list<const char*> names
@@ -52,7 +51,6 @@ std::shared_ptr<ParticleProperty> tryBindDoubleColumn(
 }
 
 std::shared_ptr<ParticleProperty> tryBindIntSelection(const LammpsParser::Frame& frame){
-    // Accept either "Selection" or "selection" columns, int-typed.
     for(const char* name : {"Selection", "selection"}){
         const auto* col = frame.findAtomProperty(name);
         if(col && col->dataType == DataType::Int && !col->ints.empty()){
@@ -127,7 +125,6 @@ json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string
     auto coords = engine.coordNumbers();
     auto cavityRadii = engine.cavityRadii();
 
-    // Aggregate stats.
     double volumeSum = 0.0;
     long long coordSum = 0;
     const int atomCount = frame.natoms;
@@ -138,7 +135,6 @@ json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string
     const double meanVolume = atomCount > 0 ? volumeSum / atomCount : 0.0;
     const double meanCoord = atomCount > 0 ? static_cast<double>(coordSum) / atomCount : 0.0;
 
-    // Summary table (written to <base>_voronoi.parquet) -----------------------
     json result;
     result["main_listing"] = {
         {"total_atoms", atomCount},
@@ -163,13 +159,6 @@ json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string
             spdlog::warn("Could not write Voronoi summary parquet: {}", voronoiPath);
         }
 
-        // Per-atom table (<base>_atoms.parquet) via the canonical streaming writer.
-        // structure columns are intentionally omitted (includeStructureColumns=false):
-        // Voronoi produces no crystal-structure classification, so emitting them would
-        // overwrite an upstream PTM/CNA stage's structure_id during the pipeline merge.
-        // Coordination lives in its own `coordination` property column (below), which is
-        // what the UI property catalog discovers; the "Coordination_<k>" bucket still
-        // drives standalone Voronoi GLB grouping / listings.
         const std::string atomsPath = outputBase + "_atoms.parquet";
         const auto& faceIndices = engine.faceIndices();
         streamAtomsToParquet(

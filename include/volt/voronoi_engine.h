@@ -36,11 +36,8 @@ public:
     std::shared_ptr<ParticleProperty> coordNumbers() const { return _coordNumbers; }
     std::shared_ptr<ParticleProperty> cavityRadii() const { return _cavityRadii; }
 
-    // Per-atom face-order lists (index vector). Each element is a sorted list of
-    // face orders (3,4,5,...) from the atom's valid Voronoi faces.
     const std::vector<std::vector<int>>& faceIndices() const { return _faceIndices; }
 
-    // Aggregate face-order statistics (populated after perform()).
     double meanFaceOrder() const { return _meanFaceOrder; }
     int maxFaceOrderObserved() const { return _maxFaceOrderObserved; }
     int polyhedraMeshCount() const { return _polyhedraMeshCount; }
@@ -65,7 +62,6 @@ private:
     std::shared_ptr<ParticleProperty> _coordNumbers;
     std::shared_ptr<ParticleProperty> _cavityRadii;
 
-    // Per-atom face-order index vectors (one entry per atom, size = n)
     std::vector<std::vector<int>> _faceIndices;
 
     double _meanFaceOrder = 0.0;
