@@ -8,9 +8,7 @@
 
 namespace Volt{
 
-namespace {
 constexpr double kEps = 1e-10;
-}
 
 void VoronoiCell::initCube(double halfSide){
     _vertices.clear();

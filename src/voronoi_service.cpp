@@ -26,8 +26,6 @@ void VoronoiService::setFaceThreshold(double v){ _faceThreshold = v; }
 void VoronoiService::setUseRadii(bool v){ _useRadii = v; }
 void VoronoiService::setOnlySelected(bool v){ _onlySelected = v; }
 
-namespace {
-
 std::shared_ptr<ParticleProperty> tryBindDoubleColumn(
     const LammpsParser::Frame& frame,
     std::initializer_list<const char*> names
@@ -67,8 +65,6 @@ std::shared_ptr<ParticleProperty> tryBindIntSelection(const LammpsParser::Frame&
         }
     }
     return nullptr;
-}
-
 }
 
 json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string& outputBase){
