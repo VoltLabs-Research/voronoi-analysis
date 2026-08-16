@@ -171,6 +171,7 @@ json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string
                     const auto& fi = faceIndices[i];
                     std::vector<double> fiDouble(fi.begin(), fi.end());
                     w.field("face_indices", fiDouble);
+                    w.field("max_face_order", static_cast<std::int64_t>(fi.empty() ? 0 : fi.back()));
                 }
             },
             /*resolveStructureId=*/{},
