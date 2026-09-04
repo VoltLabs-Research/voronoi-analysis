@@ -149,11 +149,8 @@ json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string
 
     if(!outputBase.empty()){
         const std::string voronoiPath = outputBase + "_voronoi.parquet";
-        if(JsonUtils::writeJsonToParquet(result, voronoiPath)){
-            spdlog::info("Voronoi summary parquet written to {}", voronoiPath);
-        }else{
-            spdlog::warn("Could not write Voronoi summary parquet: {}", voronoiPath);
-        }
+        JsonUtils::writeJsonToParquet(result, voronoiPath);
+        spdlog::info("Voronoi summary parquet written to {}", voronoiPath);
 
         const std::string atomsPath = outputBase + "_atoms.parquet";
         const auto& faceIndices = engine.faceIndices();
