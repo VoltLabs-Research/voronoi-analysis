@@ -1,5 +1,6 @@
 #include <volt/voronoi_engine.h>
 #include <volt/voronoi_cell.h>
+#include <volt/core/progress.h>
 #include <spdlog/spdlog.h>
 #include <oneapi/tbb/parallel_for.h>
 #include <oneapi/tbb/blocked_range.h>
@@ -59,25 +60,46 @@ void VoronoiAnalysisEngine::perform(){
         spdlog::info("Voronoi: auto-selected cutoff = {:.4f}", _effectiveCutoff);
     }
 
+    spdlog::info("Building neighbor lists (cutoff {:.5g}) for {} atoms...", _effectiveCutoff, _positions->size());
+    Stopwatch timer;
     CutoffNeighborFinder finder;
     if(!finder.prepare(_effectiveCutoff, _positions, _simCell)){
         spdlog::error("Voronoi: failed to build neighbor list");
         return;
     }
+    spdlog::info("Neighbor lists ready in {}", timer.elapsed());
 
     const size_t n = _positions->size();
 
+    size_t cellCount = n;
+    if(_selection){
+        cellCount = 0;
+        for(size_t i = 0; i < n; ++i){
+            if(_selection->getInt(i) != 0) ++cellCount;
+        }
+        spdlog::info("Computing Voronoi cells for {} selected atoms (of {})...", cellCount, n);
+    }else{
+        spdlog::info("Computing Voronoi cells for {} atoms...", n);
+    }
+    ProgressReporter progress("Computing Voronoi cells", n);
     oneapi::tbb::parallel_for(
         oneapi::tbb::blocked_range<size_t>(0, n),
-        [this, &finder](const oneapi::tbb::blocked_range<size_t>& range){
+        [this, &finder, &progress](const oneapi::tbb::blocked_range<size_t>& range){
             CutoffNeighborFinder& sharedFinder = const_cast<CutoffNeighborFinder&>(finder);
             for(size_t i = range.begin(); i < range.end(); ++i){
                 processAtom(i, sharedFinder);
             }
+            progress.advance(range.size());
         }
     );
 
     computeAggregates();
+    spdlog::info("Computed {} Voronoi cells in {}", cellCount, progress.elapsed());
+
+    const size_t validCells = static_cast<size_t>(_polyhedraMeshCount);
+    if(validCells < cellCount){
+        spdlog::warn("{} of {} Voronoi cells have no neighbor faces left (coordination 0)", cellCount - validCells, cellCount);
+    }
 }
 
 void VoronoiAnalysisEngine::processAtom(size_t atomIndex, CutoffNeighborFinder& finder){
