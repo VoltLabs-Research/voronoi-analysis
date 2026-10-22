@@ -131,6 +131,14 @@ json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string
     const double meanVolume = atomCount > 0 ? volumeSum / atomCount : 0.0;
     const double meanCoord = atomCount > 0 ? static_cast<double>(coordSum) / atomCount : 0.0;
 
+    const double cellVolume = frame.simulationCell.volume3D();
+    spdlog::info(
+        "Voronoi statistics: mean atomic volume {:.4g} (cells fill {:.2f}% of the simulation cell), "
+        "mean coordination {:.2f}, mean face order {:.2f}, max face order {}",
+        meanVolume, cellVolume > 0.0 ? 100.0 * volumeSum / cellVolume : 0.0, meanCoord,
+        engine.meanFaceOrder(), engine.maxFaceOrderObserved()
+    );
+
     json result;
     result["main_listing"] = {
         {"total_atoms", atomCount},
