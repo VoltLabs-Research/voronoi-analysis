@@ -2,6 +2,7 @@
 #include <volt/voronoi_engine.h>
 #include <volt/core/frame_adapter.h>
 #include <volt/core/analysis_result.h>
+#include <volt/core/progress.h>
 #include <volt/utilities/parquet_atom_writer.h>
 #include <volt/utilities/json_utils.h>
 #include <spdlog/spdlog.h>
@@ -115,7 +116,10 @@ json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string
         selection.get(),
         params
     );
+    // The tessellation, then the outputs.
+    ProgressSteps steps({3.0, 2.0});
     engine.perform();
+    steps.next();
 
     auto volumes = engine.atomicVolumes();
     auto coords = engine.coordNumbers();
