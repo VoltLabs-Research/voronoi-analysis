@@ -60,6 +60,8 @@ void VoronoiAnalysisEngine::perform(){
         spdlog::info("Voronoi: auto-selected cutoff = {:.4f}", _effectiveCutoff);
     }
 
+    // Neighbor lists, then the Voronoi cells, which dominate.
+    ProgressSteps steps({1.0, 8.0});
     spdlog::info("Building neighbor lists (cutoff {:.5g}) for {} atoms...", _effectiveCutoff, _positions->size());
     Stopwatch timer;
     CutoffNeighborFinder finder;
@@ -68,6 +70,7 @@ void VoronoiAnalysisEngine::perform(){
         return;
     }
     spdlog::info("Neighbor lists ready in {}", timer.elapsed());
+    steps.next();
 
     const size_t n = _positions->size();
 
