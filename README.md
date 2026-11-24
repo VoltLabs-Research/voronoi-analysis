@@ -5,6 +5,7 @@ Computes a per-atom Voronoi tessellation and reports the topological coordinatio
 ## Install
 
 ```bash
+npm install -g @voltstack/vpm
 vpm install @voltlabs/voronoi-analysis
 ```
 
