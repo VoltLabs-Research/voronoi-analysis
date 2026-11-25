@@ -11,6 +11,8 @@ namespace Volt{
 using Volt::Particles::ParticleProperty;
 using Volt::Particles::SimulationCell;
 
+class VoronoiAnalysisLog;
+
 class VoronoiAnalysisEngine{
 public:
     struct Params{
@@ -18,6 +20,11 @@ public:
         double edgeThreshold = 0.0;
         double faceThreshold = 0.0;
         bool useRadii = false;
+    };
+
+    // The cutoff the engine estimated because none was given.
+    struct AutoCutoff{
+        double radius;
     };
 
     VoronoiAnalysisEngine(
@@ -28,7 +35,7 @@ public:
         const Params& params
     );
 
-    void perform();
+    void perform(VoronoiAnalysisLog& log);
 
     double effectiveCutoff() const noexcept { return _effectiveCutoff; }
 
@@ -43,6 +50,7 @@ public:
     int polyhedraMeshCount() const { return _polyhedraMeshCount; }
 
     ParticleProperty* positions() const { return _positions; }
+    ParticleProperty* selection() const { return _selection; }
     const SimulationCell& cell() const { return _simCell; }
     const Params& params() const { return _params; }
 

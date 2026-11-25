@@ -1,7 +1,7 @@
 #include <volt/voronoi_engine.h>
+#include <volt/voronoi_analysis_log.h>
 #include <volt/voronoi_cell.h>
 #include <volt/core/progress.h>
-#include <spdlog/spdlog.h>
 #include <oneapi/tbb/parallel_for.h>
 #include <oneapi/tbb/blocked_range.h>
 #include <algorithm>
@@ -52,38 +52,24 @@ double VoronoiAnalysisEngine::estimateAutoCutoff(){
     return std::max(cutoff, 2.5);
 }
 
-void VoronoiAnalysisEngine::perform(){
+void VoronoiAnalysisEngine::perform(VoronoiAnalysisLog& log){
     if(!_positions || _positions->size() == 0) return;
 
     if(!(_effectiveCutoff > 0.0)){
         _effectiveCutoff = estimateAutoCutoff();
-        spdlog::info("Voronoi: auto-selected cutoff = {:.4f}", _effectiveCutoff);
+        log.dump(AutoCutoff{_effectiveCutoff});
     }
 
-    // Neighbor lists, then the Voronoi cells, which dominate.
-    ProgressSteps steps({1.0, 8.0});
-    spdlog::info("Building neighbor lists (cutoff {:.5g}) for {} atoms...", _effectiveCutoff, _positions->size());
-    Stopwatch timer;
+    ProgressSteps steps({
+        {"Building neighbor lists", 1.0},
+        {"Computing Voronoi cells", 8.0},
+    });
     CutoffNeighborFinder finder;
-    if(!finder.prepare(_effectiveCutoff, _positions, _simCell)){
-        spdlog::error("Voronoi: failed to build neighbor list");
-        return;
-    }
-    spdlog::info("Neighbor lists ready in {}", timer.elapsed());
+    finder.prepare(_effectiveCutoff, _positions, _simCell);
+    log.dump(finder);
     steps.next();
 
     const size_t n = _positions->size();
-
-    size_t cellCount = n;
-    if(_selection){
-        cellCount = 0;
-        for(size_t i = 0; i < n; ++i){
-            if(_selection->getInt(i) != 0) ++cellCount;
-        }
-        spdlog::info("Computing Voronoi cells for {} selected atoms (of {})...", cellCount, n);
-    }else{
-        spdlog::info("Computing Voronoi cells for {} atoms...", n);
-    }
     ProgressReporter progress("Computing Voronoi cells", n);
     oneapi::tbb::parallel_for(
         oneapi::tbb::blocked_range<size_t>(0, n),
@@ -97,12 +83,6 @@ void VoronoiAnalysisEngine::perform(){
     );
 
     computeAggregates();
-    spdlog::info("Computed {} Voronoi cells in {}", cellCount, progress.elapsed());
-
-    const size_t validCells = static_cast<size_t>(_polyhedraMeshCount);
-    if(validCells < cellCount){
-        spdlog::warn("{} of {} Voronoi cells have no neighbor faces left (coordination 0)", cellCount - validCells, cellCount);
-    }
 }
 
 void VoronoiAnalysisEngine::processAtom(size_t atomIndex, CutoffNeighborFinder& finder){

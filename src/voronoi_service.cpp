@@ -1,8 +1,10 @@
 #include <volt/voronoi_service.h>
+#include <volt/voronoi_analysis_log.h>
 #include <volt/voronoi_engine.h>
 #include <volt/core/frame_adapter.h>
 #include <volt/core/analysis_result.h>
 #include <volt/core/progress.h>
+#include <volt/plugin/output_files.h>
 #include <volt/utilities/parquet_atom_writer.h>
 #include <volt/utilities/json_utils.h>
 #include <spdlog/spdlog.h>
@@ -27,47 +29,6 @@ void VoronoiService::setFaceThreshold(double v){ _faceThreshold = v; }
 void VoronoiService::setUseRadii(bool v){ _useRadii = v; }
 void VoronoiService::setOnlySelected(bool v){ _onlySelected = v; }
 
-std::shared_ptr<ParticleProperty> tryBindDoubleColumn(
-    const LammpsParser::Frame& frame,
-    std::initializer_list<const char*> names
-){
-    for(const char* name : names){
-        const auto* col = frame.findAtomProperty(name);
-        if(col && col->dataType == DataType::Double && !col->doubles.empty()){
-            auto prop = std::make_shared<ParticleProperty>();
-            prop->bindExternalData(
-                const_cast<void*>(col->constData()),
-                col->doubles.size(),
-                DataType::Double,
-                1,
-                sizeof(double),
-                nullptr
-            );
-            return prop;
-        }
-    }
-    return nullptr;
-}
-
-std::shared_ptr<ParticleProperty> tryBindIntSelection(const LammpsParser::Frame& frame){
-    for(const char* name : {"Selection", "selection"}){
-        const auto* col = frame.findAtomProperty(name);
-        if(col && col->dataType == DataType::Int && !col->ints.empty()){
-            auto prop = std::make_shared<ParticleProperty>();
-            prop->bindExternalData(
-                const_cast<void*>(col->constData()),
-                col->ints.size(),
-                DataType::Int,
-                1,
-                sizeof(int),
-                nullptr
-            );
-            return prop;
-        }
-    }
-    return nullptr;
-}
-
 json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string& outputBase){
     auto startTime = std::chrono::high_resolution_clock::now();
 
@@ -83,7 +44,7 @@ json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string
 
     std::shared_ptr<ParticleProperty> radii;
     if(_useRadii){
-        radii = tryBindDoubleColumn(frame, {"Radius", "radius", "c_radius"});
+        radii = FrameAdapter::findColumnShared(frame, {"Radius", "radius", "c_radius"}, DataType::Double);
         if(!radii){
             spdlog::warn("Voronoi: --useRadii requested but no Radius column found; falling back to plain Voronoi");
         }
@@ -91,7 +52,7 @@ json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string
 
     std::shared_ptr<ParticleProperty> selection;
     if(_onlySelected){
-        selection = tryBindIntSelection(frame);
+        selection = FrameAdapter::findColumnShared(frame, {"Selection", "selection"}, DataType::Int);
         if(!selection){
             spdlog::warn("Voronoi: --onlySelected requested but no Selection column found; treating all atoms as selected");
         }
@@ -103,12 +64,6 @@ json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string
     params.faceThreshold = _faceThreshold;
     params.useRadii = _useRadii && radii != nullptr;
 
-    spdlog::info(
-        "Starting Voronoi tessellation (cutoff={}, edgeThr={}, faceThr={}, radii={})",
-        params.cutoff, params.edgeThreshold, params.faceThreshold,
-        params.useRadii ? "true" : "false"
-    );
-
     VoronoiAnalysisEngine engine(
         positions.get(),
         frame.simulationCell,
@@ -116,9 +71,13 @@ json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string
         selection.get(),
         params
     );
-    // The tessellation, then the outputs.
-    ProgressSteps steps({3.0, 2.0});
-    engine.perform();
+    VoronoiAnalysisLog log;
+    ProgressSteps steps({
+        {"Computing the Voronoi tessellation", 3.0},
+        {"Writing outputs", 2.0},
+    });
+    engine.perform(log);
+    log.dump(engine);
     steps.next();
 
     auto volumes = engine.atomicVolumes();
@@ -134,14 +93,6 @@ json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string
     }
     const double meanVolume = atomCount > 0 ? volumeSum / atomCount : 0.0;
     const double meanCoord = atomCount > 0 ? static_cast<double>(coordSum) / atomCount : 0.0;
-
-    const double cellVolume = frame.simulationCell.volume3D();
-    spdlog::info(
-        "Voronoi statistics: mean atomic volume {:.4g} (cells fill {:.2f}% of the simulation cell), "
-        "mean coordination {:.2f}, mean face order {:.2f}, max face order {}",
-        meanVolume, cellVolume > 0.0 ? 100.0 * volumeSum / cellVolume : 0.0, meanCoord,
-        engine.meanFaceOrder(), engine.maxFaceOrderObserved()
-    );
 
     json result;
     result["main_listing"] = {
@@ -160,14 +111,12 @@ json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string
     result["is_failed"] = false;
 
     if(!outputBase.empty()){
-        const std::string voronoiPath = outputBase + "_voronoi.parquet";
-        JsonUtils::writeJsonToParquet(result, voronoiPath);
-        spdlog::info("Voronoi summary parquet written to {}", voronoiPath);
+        log.dump(JsonUtils::writeSummaryTable(result, outputBase, "voronoi", "Voronoi summary"));
 
-        const std::string atomsPath = outputBase + "_atoms.parquet";
+        const WrittenTable atoms{"Voronoi atoms", outputPath(outputBase, "atoms")};
         const auto& faceIndices = engine.faceIndices();
         streamAtomsToParquet(
-            atomsPath,
+            atoms.path,
             frame,
             [&coords](std::size_t i){
                 return "Coordination_" + std::to_string(coords->getInt(i));
@@ -186,7 +135,7 @@ json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string
             /*resolveStructureId=*/{},
             /*includeStructureColumns=*/false
         );
-        spdlog::info("Voronoi atoms parquet written to {}", atomsPath);
+        log.dump(atoms);
     }
 
     return result;
