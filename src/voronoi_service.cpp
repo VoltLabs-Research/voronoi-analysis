@@ -121,7 +121,7 @@ json VoronoiService::compute(const LammpsParser::Frame& frame, const std::string
             [&coords](std::size_t i){
                 return "Coordination_" + std::to_string(coords->getInt(i));
             },
-            [&](ColumnarAtomWriter& w, std::size_t i){
+            [&](ColumnarRowWriter& w, std::size_t i){
                 w.field("coordination",  coords->getInt(i));
                 w.field("atomic_volume", volumes->getDouble(i));
                 w.field("cavity_radius", cavityRadii->getDouble(i));
