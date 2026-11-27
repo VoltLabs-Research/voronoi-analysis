@@ -13,7 +13,7 @@ class VoronoiAnalysisConan(ConanFile):
     requires = (
         "boost/1.88.0",
         "onetbb/2021.12.0",
-        "coretoolkit/[>=2.8]",
+        "coretoolkit/[>=2.9]",
         "spdlog/1.14.1",
         "nlohmann_json/3.11.3",
     )
